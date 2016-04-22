@@ -24,7 +24,8 @@ import threading
 import logging
 from lxml import etree
 from ryu.netide.netip import *
-
+from CompositionManager import Composition
+from OFMsg import OFMsg
 
 shimname = "shim"
 logger = logging.getLogger()
@@ -41,30 +42,6 @@ LEVELS = {  'notset':logging.NOTSET,
             'error':logging.ERROR,
             'critical':logging.CRITICAL,
             }
-
-class Composition():
-    def __init__(self, spec_filename):
-        self.doc = etree.parse(spec_filename)
-        self.module_list = {}
-        self.load_modules(self.doc)
-    
-    # parsing the composition configuration
-    def load_modules(self, doc):
-        for df in doc.xpath('//Module'):
-            self.module_list[df.attrib['id']] = {}
-            module = self.module_list[df.attrib['id']]
-            for sf in df.getchildren():
-                for key in sf.attrib:
-                    module[key] = sf.attrib[key].split()
-    
-    # this method returns the modules that are entitled to receive the event message
-    def check_event_conditions(self, datapath_id, control_message):
-        modules = [] 
-        for module, conditions in self.module_list.iteritems():
-            for dpid in conditions['datapaths']:
-                if int(datapath_id,16) == int(dpid,16):
-                    modules.append(module)
-        return modules
 
 # Handles the communication between the core, the shim and the backends
 class MessageDispatcher(threading.Thread):
@@ -150,6 +127,10 @@ class MessageDispatcher(threading.Thread):
                     elif message_type is 'NETIDE_FENCE':
                         continue
                     else:
+                        datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]
+                        of_msg = OFMsg(datapath_id, message)
+                        if(of_msg.msg_type == 12):
+                          print(of_msg.flowMod)
                         socket.send_multipart([shimname,message])
         
                 elif "shim" in identity:

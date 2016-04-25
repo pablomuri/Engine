@@ -24,7 +24,7 @@ class OFMsg(object):
 
 
 	def flow_mod_handler(self):
-		print("flowmod!!")
+		print("flowmod!!.......................................................................................")
 		#match
 		offset = ofproto.OFP_HEADER_SIZE
 		match = OFPMatch.parse(self.msg, offset)
@@ -45,3 +45,4 @@ class OFMsg(object):
 
 		self.flowMod = OFPFlowMod(self.dpid, match, cookie, command, idle_timeout, hard_timeout, priority,
 			buffer_id, out_port, flags, actions)
+		print(self.flowMod)

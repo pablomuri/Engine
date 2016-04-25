@@ -1,6 +1,6 @@
 from lxml import etree
 from OFMsg import OFMsg
-
+from ryu.netide.netip import *
 
 OF_TYPES = {
     10 : "packetIn",
@@ -11,6 +11,7 @@ class Composition():
         self.doc = etree.parse(spec_filename)
         self.module_list = {}
         self.load_modules(self.doc)
+        self.resolution_messages = {}
     
     # parsing the composition configuration
     def load_modules(self, doc):
@@ -26,15 +27,15 @@ class Composition():
         modules = [] 
         for module, conditions in self.module_list.iteritems():
             add_module = True
-            print(conditions)
+            #print(conditions)
             for condition, value in conditions.iteritems():
                 if not self.check_condition(condition, value, datapath_id, message):
-                    print("not conditions ")
+                    #print("not conditions ")
                     add_module = True # -------------------FALSEEE!!!!
                     break
             if add_module:
                 modules.append(module)
-        print(modules)
+        #print(modules)
         return modules
 
 
@@ -46,9 +47,9 @@ class Composition():
         elif condition == 'inPort':
             of_msg = OFMsg(datapath_id, message)
             if(of_msg.msg_type == 10):
-                print("packet in")
+                #print("packet in")
                 in_port = of_msg.packetIn.in_port
-                print(in_port)
+                #print(in_port)
                 if str(in_port) in value:
                     return True
             else : 
@@ -61,16 +62,42 @@ class Composition():
             try:
                 of_msg = OFMsg(datapath_id, message)
                 if(OF_TYPES[of_msg.msg_type] in value):
-                    print("events conditions!!!")
+                    #print("events conditions!!!")
                     return True
             except:
                 pass
         '''
-        print('Condition %s value %s is False' % (condition, value))
+        #print('Condition %s value %s is False' % (condition, value))
         return False
 
 
-    def resolution(self, msg, dpid):
-        of_msg = OFMsg(dpid, msg)
-        if(of_msg.msg_type == 12):
-            print(of_msg.flowMod)
+    def resolution(self, message, dpid, backend):
+        message_data = message[NetIDEOps.NetIDE_Header_Size:]
+        decoded_header = NetIDEOps.netIDE_decode_header(message)
+        module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
+        of_msg = OFMsg(dpid, message_data)
+
+        if(of_msg.msg_type == 14):
+            self.resolution_messages[module_id] = (of_msg, message)
+
+            if len(self.resolution_messages) == len(self.module_list):
+
+                of_msg1 = self.resolution_messages.values()[0][0]
+                of_msg2 = self.resolution_messages.values()[1][0]
+
+                if(of_msg1.match == of_msg2.match):
+                    if of_msg1.actions == of_msg2.actions:
+                        #flow are equals, return any msg
+                        return self.resolution_messages.values()[0][1]
+
+                    else :
+                        #return the message with flowmod no actions
+                        for message_tuple in self.resolution_messages.values():
+                            (of_msg, message) = message_tuple
+                            if not of_msg.actions:
+                                self.resolution_messages = {}
+                                return message
+
+        else:
+            #not flow mod
+            return message

@@ -1,6 +1,7 @@
 from ryu.ofproto import ofproto_v1_0 as ofproto
 from ryu.ofproto import ofproto_parser
-from ryu.ofproto.ofproto_v1_0_parser import *
+from ryu.ofproto.ofproto_v1_0_parser import OFPPacketIn,OFPMatch,OFPAction
+import struct
 
 class OFMsg(object):
 	"""docstring for ofmsg"""
@@ -8,14 +9,15 @@ class OFMsg(object):
 		super(OFMsg, self).__init__()
 		self.msg = msg
 		self.dpid = dpid
-		self.version, self.msg_type, self.msg_len, self.xid = ofproto_parser.header(msg)
 		print("header")
 		print(ofproto_parser.header(msg))
-
+		self.version, self.msg_type, self.msg_len, self.xid = ofproto_parser.header(msg)
+		
+	
 		if self.msg_type == 10: #packet in
 			self.packet_in_handler()
 			print(self.packetIn)
-		elif self.msg_type == 12: #flow_mod
+		elif self.msg_type == 14: #flow_mod
 			self.flow_mod_handler()
 
 		
@@ -27,22 +29,19 @@ class OFMsg(object):
 		print("flowmod!!.......................................................................................")
 		#match
 		offset = ofproto.OFP_HEADER_SIZE
-		match = OFPMatch.parse(self.msg, offset)
+		self.match = OFPMatch.parse(self.msg, offset)
 
 		#flow mod fields
-		offset += ofproto.OFP_MATCH_SIZE
-		(cookie, command, idle_timeout, hard_timeout, 
-			priority, buffer_id, out_port, flags) = struct.unpack_from(ofproto.OFP_MATCH_PACK_STR, self.msg, offset)
+		offset += ofproto.OFP_MATCH_SIZE	
+		(self.cookie, self.command, self.idle_timeout, self.hard_timeout, 
+			self.priority, self.buffer_id, self.out_port, self.flags) = struct.unpack_from(ofproto.OFP_FLOW_MOD_PACK_STR0, self.msg, offset)
 
 		#actions
-		actions = []
+		self.actions = []
 		offset = ofproto.OFP_FLOW_MOD_SIZE
 		while offset < self.msg_len:
 			action = OFPAction.parser(self.msg, offset)
-			actions.append(action)
-			offset += ofproto.OFP_ACTION_OUTPUT_SIZE
-			print(len(action))
-
-		self.flowMod = OFPFlowMod(self.dpid, match, cookie, command, idle_timeout, hard_timeout, priority,
-			buffer_id, out_port, flags, actions)
-		print(self.flowMod)
+			(type_, len_) = struct.unpack_from('!HH', self.msg, offset)
+			print(len_)
+			self.actions.append(action)
+			offset += len_

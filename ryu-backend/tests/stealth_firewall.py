@@ -37,7 +37,10 @@ class Firewall(app_manager.RyuApp):
     def add_flow(self, datapath, match, out_port, idle_to, hard_to):
         ofproto = datapath.ofproto
 
-        actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+        if out_port:
+            actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+        else:
+            actions = []
 
         mod = datapath.ofproto_parser.OFPFlowMod(
             datapath=datapath, match=match, cookie=0,
@@ -73,10 +76,11 @@ class Firewall(app_manager.RyuApp):
 
             # install a flow to avoid packet_in next time
             #ARP Packets......................................................................
+
             if eth.ethertype == ETH_ARP:
                 match = datapath.ofproto_parser.OFPMatch(in_port=msg.in_port, dl_type = ETH_ARP,
                     dl_src=haddr_to_bin(src), dl_dst=haddr_to_bin(dst))
-                self.add_flow(datapath, match, out_port, 5, 0)
+                #self.add_flow(datapath, match, out_port, 5, 0)
                 self.forwardPacket(msg, out_port)
 
             # IP Packets.......................................................................
@@ -90,6 +94,10 @@ class Firewall(app_manager.RyuApp):
 
                     self.add_flow(datapath, match, out_port, 5, 0)
                     self.forwardPacket(msg, out_port)
+                else :
+                    #add flow and packet_out with no actions
+                    self.add_flow(datapath, match, None, 5, 0)
+                    self.forwardPacket(msg, None)
 
 
         #flood packet if ARP..................................................................
@@ -97,9 +105,6 @@ class Firewall(app_manager.RyuApp):
             out_port = ofproto.OFPP_FLOOD
             if eth.ethertype == ETH_ARP:
                 #if packet is ARP, foward packet (flood ports)
-                match = datapath.ofproto_parser.OFPMatch(in_port=msg.in_port, dl_type = ETH_ARP,
-                    dl_src=haddr_to_bin(src), dl_dst=haddr_to_bin(dst))
-                self.add_flow(datapath, match, out_port, 5, 0)
                 self.forwardPacket(msg, out_port)
 
 
@@ -131,9 +136,15 @@ class Firewall(app_manager.RyuApp):
             data = msg.data
 
         if msg.buffer_id is not ofproto.OFP_NO_BUFFER:
-            po_actions = [datapath.ofproto_parser.OFPActionOutput(outPort)]
+            if not outPort:
+                po_actions =[] #no actions = drop
+            else:
+                po_actions = [datapath.ofproto_parser.OFPActionOutput(outPort)]
+
             pkt_out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port, data=data, actions=po_actions)
             datapath.send_msg(pkt_out)
+
+
 
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
     def _port_status_handler(self, ev):

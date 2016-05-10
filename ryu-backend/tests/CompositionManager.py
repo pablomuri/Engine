@@ -11,8 +11,10 @@ class Composition():
         self.doc = etree.parse(spec_filename)
         self.module_list = {}
         self.load_modules(self.doc)
+        self.resolution_messages_flowmod = {}
+        self.resolution_messages_packetout = {}
         self.resolution_messages = {}
-    
+        self.fence_messages = {}
     # parsing the composition configuration
     def load_modules(self, doc):
         for df in doc.xpath('//Module'):
@@ -38,6 +40,10 @@ class Composition():
         #print(modules)
         return modules
 
+
+    def fence_msg_handler(self, mod_id, xid):
+        if not send_message:
+            fence_messages[mod_id] = xid
 
     def check_condition(self, condition, value, datapath_id, message):
         if condition == 'datapaths':
@@ -71,33 +77,86 @@ class Composition():
         return False
 
 
-    def resolution(self, message, dpid, backend):
+    def add_message(self, message, dpid):
         message_data = message[NetIDEOps.NetIDE_Header_Size:]
         decoded_header = NetIDEOps.netIDE_decode_header(message)
         module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
         of_msg = OFMsg(dpid, message_data)
 
         if(of_msg.msg_type == 14):
+            self.resolution_messages_flowmod[module_id] = (of_msg, message)
+        elif(of_msg.msg_type == 13):
+            self.resolution_messages_packetout[module_id] = (of_msg, message)
+            #TODO: return messages if out_port flood ?
+        else:
             self.resolution_messages[module_id] = (of_msg, message)
 
-            if len(self.resolution_messages) == len(self.module_list):
+    def flow_mod_resolution(self, message, dpid):
+        message_data = message[NetIDEOps.NetIDE_Header_Size:]
+        decoded_header = NetIDEOps.netIDE_decode_header(message)
+        module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
+        of_msg = OFMsg(dpid, message_data)
 
-                of_msg1 = self.resolution_messages.values()[0][0]
-                of_msg2 = self.resolution_messages.values()[1][0]
 
-                if(of_msg1.match == of_msg2.match):
-                    if of_msg1.actions == of_msg2.actions:
-                        #flow are equals, return any msg
-                        return self.resolution_messages.values()[0][1]
+        self.resolution_messages[module_id] = (of_msg, message)
 
-                    else :
-                        #return the message with flowmod no actions
-                        for message_tuple in self.resolution_messages.values():
-                            (of_msg, message) = message_tuple
-                            if not of_msg.actions:
-                                self.resolution_messages = {}
-                                return message
+        if len(self.resolution_messages) == len(self.module_list):
+            of_msg1 = self.resolution_messages.values()[0][0]
+            of_msg2 = self.resolution_messages.values()[1][0]
 
-        else:
-            #not flow mod
-            return message
+            print("match resolution.......................................")
+            print(of_msg1.match)
+            print(of_msg2.match)
+
+            if((of_msg1.match['dl_dst'], of_msg1.match['dl_src'], of_msg1.match['in_port']) == 
+                (of_msg2.match['dl_dst'], of_msg2.match['dl_src'], of_msg2.match['in_port'])):
+                print("match equals")
+
+                print("actions resolution..................")
+                print(of_msg1.actions[0])
+                print(of_msg2.actions[0])
+
+                if of_msg1.actions[0].port == of_msg2.actions[0].port:
+                    #flow are equals, return any msg
+                    print("actions equals")
+                    return self.resolution_messages.values()[0][1]
+
+                else :
+                    #return the message with flowmod no actions
+                    for message_tuple in self.resolution_messages.values():
+                        (of_msg, message) = message_tuple
+                        if not of_msg.actions:
+                            print("not actions (drop message)")
+                            self.resolution_messages = {}
+                            return message
+
+
+    def packet_out_resolution(self, message, dpid):
+        message_data = message[NetIDEOps.NetIDE_Header_Size:]
+        decoded_header = NetIDEOps.netIDE_decode_header(message)
+        module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
+        of_msg = OFMsg(dpid, message_data)
+
+        self.resolution_messages_packetout[module_id] = (of_msg, message)
+
+        if len(self.resolution_messages_packetout) == len(self.module_list):
+            of_msg1 = self.resolution_messages_packetout.values()[0][0]
+            of_msg2 = self.resolution_messages_packetout.values()[1][0]
+
+            if of_msg1.actions[0].port == of_msg2.actions[0].port:
+                #packet_out are equals, return any msg
+                print("packet_out actions equals")
+                return self.resolution_messages.values()[0][1]
+
+            else :
+                #return the message with packet_out no actions
+                for message_tuple in self.resolution_messages_packetout.values():
+                    (of_msg, message) = message_tuple
+                    if not of_msg.actions:
+                        print("not actions (drop message)")
+                        self.resolution_messages_packetout = {}
+                        return message
+
+
+
+

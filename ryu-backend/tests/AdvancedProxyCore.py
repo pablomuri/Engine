@@ -55,7 +55,7 @@ class MessageDispatcher(threading.Thread):
 		self.connected_backends = {}
 		self.running_modules = {}
 
-	def check_heartbeat(self):
+	def check_heartbeat(self):  
 		# checking the status of the previously sent messages
 		if time.time() > self.heartbeat_time + self.heartbeat_timeout:
 			self.heartbeat_time = time.time()
@@ -125,15 +125,21 @@ class MessageDispatcher(threading.Thread):
 						module_id += 1
 						socket.send_multipart([identity,ack_message])
 					elif message_type is 'NETIDE_FENCE':
-						continue
-					else:
-						if message_type is 'NETIDE_OPENFLOW':
+						print("FENCE MESSAGE...................................................")
+						datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]
+						module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
+						x_id = decoded_header[NetIDEOps.NetIDE_header['XID']]
+
+						print(" datapath_id %d  module_id %d x_id %d" % (datapath_id, module_id, x_id))
+
+						composition.fence_msg_handler(module_id, x_id)
+						if composition.send_message():
+							socket.send_multipart([shimname,composition.msg_to_send])
+					elif message_type is 'NETIDE_OPENFLOW':
 							datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]
-							msg_to_send = composition.resolution(datapath_id, message)
-							if msg_to_send:
-								socket.send_multipart([shimname,msg_to_send])
-						else:
-							socket.send_multipart([shimname,message])
+							self.composition.resolution(message, datapath_id)
+					else:
+						socket.send_multipart([shimname,message])
 		
 				elif "shim" in identity:
 					# Forwarding the message to all the backends

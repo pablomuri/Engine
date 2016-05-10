@@ -17,6 +17,8 @@ class OFMsg(object):
 		if self.msg_type == 10: #packet in
 			self.packet_in_handler()
 			print(self.packetIn)
+		elif self.msg_type == 13: #packet out
+			self.packet_out_handler()
 		elif self.msg_type == 14: #flow_mod
 			self.flow_mod_handler()
 
@@ -24,9 +26,10 @@ class OFMsg(object):
 	def packet_in_handler(self):
 		self.packetIn = OFPPacketIn.parser(self.dpid, self.version, self.msg_type, self.msg_len, self.xid, self.msg)
 
+	def packet_out_handler(self):
+		self.actions = self.actions_decoder(ofproto.OFP_PACKET_OUT_SIZE)
 
 	def flow_mod_handler(self):
-		print("flowmod!!.......................................................................................")
 		#match
 		offset = ofproto.OFP_HEADER_SIZE
 		self.match = OFPMatch.parse(self.msg, offset)
@@ -37,11 +40,14 @@ class OFMsg(object):
 			self.priority, self.buffer_id, self.out_port, self.flags) = struct.unpack_from(ofproto.OFP_FLOW_MOD_PACK_STR0, self.msg, offset)
 
 		#actions
-		self.actions = []
-		offset = ofproto.OFP_FLOW_MOD_SIZE
+		self.actions = self.actions_decoder(ofproto.OFP_FLOW_MOD_SIZE)
+
+
+	def actions_decoder(self, offset):
+		actions = []
 		while offset < self.msg_len:
 			action = OFPAction.parser(self.msg, offset)
 			(type_, len_) = struct.unpack_from('!HH', self.msg, offset)
-			print(len_)
-			self.actions.append(action)
+			actions.append(action)
 			offset += len_
+		return actions

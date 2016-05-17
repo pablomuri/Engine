@@ -9,8 +9,6 @@ class OFMsg(object):
 		super(OFMsg, self).__init__()
 		self.msg = msg
 		self.dpid = dpid
-		print("header")
-		print(ofproto_parser.header(msg))
 		self.version, self.msg_type, self.msg_len, self.xid = ofproto_parser.header(msg)
 		
 	
@@ -51,3 +49,6 @@ class OFMsg(object):
 			actions.append(action)
 			offset += len_
 		return actions
+
+	def __repr__(self):
+		return str(ofproto_parser.header(self.msg))

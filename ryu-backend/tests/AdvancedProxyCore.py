@@ -25,7 +25,7 @@ import logging
 from lxml import etree
 from ryu.netide.netip import *
 from CompositionManager import Composition
-from OFMsg import OFMsg
+
 
 shimname = "shim"
 logger = logging.getLogger()
@@ -116,6 +116,7 @@ class MessageDispatcher(threading.Thread):
 						# heartbeat time already updated, go back to the while
 						continue
 					# Handling the message
+
 					elif message_type is 'MODULE_ANNOUNCEMENT':
 						ack_message = NetIDEOps.netIDE_encode('MODULE_ACKNOWLEDGE', decoded_header[NetIDEOps.NetIDE_header['XID']], module_id, None, message_data)
 						self.running_modules[message_data] = {'module_id': module_id, 'backend': identity}
@@ -124,27 +125,24 @@ class MessageDispatcher(threading.Thread):
 							backend['id'] = module_id
 						module_id += 1
 						socket.send_multipart([identity,ack_message])
+
 					elif message_type is 'NETIDE_FENCE':
-
-
-						print("FENCE MESSAGE...................................................")
 						datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]
 						module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
 						x_id = decoded_header[NetIDEOps.NetIDE_header['XID']]
-
-						print("datapath_id %d  module_id %d xid %d" % (datapath_id, module_id, xid))
-
 						if self.composition.fence_msg_handler(module_id, x_id):
-							print("sending %d messages" % (len(self.composition.messages_to_send)))
-							for m in self.composition.messages_to_send:
-								socket.send_multipart([shimname,m])
-							self.composition.messages_to_send = []
+							if self.composition.messages_to_send:
+								print("sending %d messages" % (len(self.composition.messages_to_send)))
+								for m in self.composition.messages_to_send:
+									socket.send_multipart([shimname,m])
+								print("deleting msg to send")
+								self.composition.messages_to_send = []
 						
-
 					elif message_type is 'NETIDE_OPENFLOW':
 							datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]
 							if not self.composition.add_message(message, datapath_id):
 								socket.send_multipart([shimname,message])
+
 					else:
 						socket.send_multipart([shimname,message])
 		

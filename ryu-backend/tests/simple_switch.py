@@ -36,17 +36,18 @@ class SimpleSwitch(app_manager.RyuApp):
         super(SimpleSwitch, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
 
-    def add_flow(self, datapath, in_port, src, dst, actions):
+    def add_flow(self, datapath, in_port, src, dst, actions, ethertype):
         ofproto = datapath.ofproto
 
         match = datapath.ofproto_parser.OFPMatch(
-            in_port=in_port, dl_dst=haddr_to_bin(dst), dl_src=haddr_to_bin(src))
+            in_port=in_port, dl_dst=haddr_to_bin(dst), dl_src=haddr_to_bin(src), dl_type=ethertype)
 
         mod = datapath.ofproto_parser.OFPFlowMod(
             datapath=datapath, match=match, cookie=0,
             command=ofproto.OFPFC_ADD, idle_timeout=5, hard_timeout=0,
             priority=ofproto.OFP_DEFAULT_PRIORITY,
             flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
+        
         datapath.send_msg(mod)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -79,7 +80,7 @@ class SimpleSwitch(app_manager.RyuApp):
 
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
-            self.add_flow(datapath, msg.in_port, src, dst, actions)
+            self.add_flow(datapath, msg.in_port, src, dst, actions, eth.ethertype)
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:

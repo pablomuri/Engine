@@ -76,13 +76,13 @@ class Firewall(app_manager.RyuApp):
 
             # install a flow to avoid packet_in next time
             #ARP Packets......................................................................
-            '''
+            
             if eth.ethertype == ETH_ARP:
                 match = datapath.ofproto_parser.OFPMatch(in_port=msg.in_port, dl_type = ETH_ARP,
                     dl_src=haddr_to_bin(src), dl_dst=haddr_to_bin(dst))
                 #self.add_flow(datapath, match, out_port, 5, 0)
                 self.forwardPacket(msg, out_port)
-            '''
+            
             # IP Packets.......................................................................
             if eth.ethertype == ETH_IP:
                 match = datapath.ofproto_parser.OFPMatch(in_port=msg.in_port, dl_type = ETH_IP, 
@@ -101,13 +101,13 @@ class Firewall(app_manager.RyuApp):
                     self.forwardPacket(msg, None)
 
         #flood packet if ARP..................................................................
-        '''
+        
         else: 
             out_port = ofproto.OFPP_FLOOD
             if eth.ethertype == ETH_ARP:
                 #if packet is ARP, foward packet (flood ports)
                 self.forwardPacket(msg, out_port)
-        '''
+        
 
     def match_in_states(self, out_port, match, datapath):
         if match['in_port'] in self.states:

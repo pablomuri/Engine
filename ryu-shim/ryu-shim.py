@@ -168,13 +168,11 @@ class CoreConnection(threading.Thread):
 
             elif decoded_header[NetIDEOps.NetIDE_header['TYPE']] is NetIDEOps.NetIDE_type['NETIDE_OPENFLOW']:
                 purge_xid() # removes the old entries from the xid database
-
                 if message_length is 0:
                     return
 
                 if decoded_header[NetIDEOps.NetIDE_header['DPID']] is not 0:
                     self.datapath = self.controller.switches[int(decoded_header[NetIDEOps.NetIDE_header['DPID']])]
-
                     # Here we set a ""fake" xid so that the replies to request messages can be forwarded to the correct module by the core
                     (version, msg_type, msg_len, xid) = ofproto_parser.header(message_data)
                     module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]

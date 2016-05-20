@@ -51,4 +51,9 @@ class OFMsg(object):
 		return actions
 
 	def __repr__(self):
-		return str(ofproto_parser.header(self.msg))
+		if self.msg_type == 14:
+			return str(ofproto_parser.header(self.msg)) + str(self.match) + str(self.actions)
+		elif self.msg_type == 13:
+			return str(ofproto_parser.header(self.msg)) + str(self.actions)
+		else:
+			return str(ofproto_parser.header(self.msg))

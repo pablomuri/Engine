@@ -50,6 +50,19 @@ class OFMsg(object):
 			offset += len_
 		return actions
 
+	def match_equals(self, aux_of_msg):
+		return ((self.match['dl_dst'], self.match['dl_src'], self.match['in_port'], self.match['dl_type']) == 
+                (aux_of_msg.match['dl_dst'], aux_of_msg.match['dl_src'], aux_of_msg.match['in_port'], aux_of_msg.match['dl_type']))
+
+	def packet_out_equals(self, aux_of_msg):
+		if (self.msg_type, aux_of_msg.msg_type) == (13, 13):
+			if self.actions and aux_of_msg.actions:
+				return (self.actions[0].port == aux_of_msg.actions[0].port)
+			else:
+				return False
+		else :
+			return False
+
 	def __repr__(self):
 		if self.msg_type == 14:
 			return str(ofproto_parser.header(self.msg)) + str(self.match) + str(self.actions)

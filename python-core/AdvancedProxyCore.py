@@ -130,13 +130,16 @@ class MessageDispatcher(threading.Thread):
 						datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]
 						module_id = decoded_header[NetIDEOps.NetIDE_header['MOD_ID']]
 						x_id = decoded_header[NetIDEOps.NetIDE_header['XID']]
+
 						if self.composition.fence_msg_handler(module_id, x_id):
-							if self.composition.messages_to_send:
-								print("sending %d messages" % (len(self.composition.messages_to_send)))
-								for m in self.composition.messages_to_send:
-									socket.send_multipart([shimname,m])
-								print("deleting msg to send")
-								self.composition.messages_to_send = []
+							self.composition.resolution(self.running_modules)
+															
+							for d in self.composition.messages_to_send.values():
+								print("sending messages")
+								for of_msg, message in d:
+									socket.send_multipart([shimname,message])
+							#print("deleting msg to send")
+							self.composition.messages_to_send = {}
 						
 					elif message_type is 'NETIDE_OPENFLOW':
 							datapath_id = decoded_header[NetIDEOps.NetIDE_header['DPID']]

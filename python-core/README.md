@@ -1,13 +1,13 @@
-How it works.
+# How it works.
 
 To do the resolution, the core is storing flow-mods and packets-out recived from the backend. When the backend sends a fence message for each module, the resolution method is called.
 
 For now, It only works with two modules. (Simple_switch and stealth_firewall)
 
 -Flow_mod resolution:
-The core first compare the match of the two flowmods. Then, if there are equals, It compares the action fields, if the actions are equals, save one flowmod for a later sending. Else, if there are one with no actions, It saves that flow-mod. If there are not flows with no actions, then saves the two flow-mods.
+Compare all the flow_mods sended by the backend from the all modules. If there are two or more modules that has the same match, then the core selects the flow_mod from the highest priority module for sending.
 
-If the match are not equals, it saves the two flow mods.
+If the match are not equals, the core sends the messages.
 
 
 -Packet_out resolution:

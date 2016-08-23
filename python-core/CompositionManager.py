@@ -40,6 +40,11 @@ class Composition():
             
         #sorting OrderedDict, minor first (highest priority minor number)
         self.modules_priority_dict = OrderedDict(sorted(self.modules_priority_dict.iteritems(), key=lambda x: x[1]))
+
+        for df in doc.xpath('//ModuleCall'):
+            if "notInstallFlow" in df.attrib.keys():
+                if df.attrib['notInstallFlow'] == "true":
+                    self.modules_priority_dict[df.attrib["module"]] = "notInstallFlow"
                     
     
     # this method returns the modules that are entitled to receive the event message
@@ -140,8 +145,8 @@ class Composition():
 
     def _flow_mod_resolution(self):
         if 'flow_mod' in self.resolution_messages:
-            if self.resolution_messages['flow_mod']:
-                self.messages_to_send['flow_mod'] = []
+            if self.resolution_messages['flow_mod']: #key 'flow_mod' exists
+                self.messages_to_send['flow_mod'] = [] 
                 for module in self.modules_priority_dict.keys():
                     module_id = self.running_modules[module].get('module_id')
                     if module_id in self.resolution_messages['flow_mod']:
@@ -150,8 +155,11 @@ class Composition():
                         for aux_of_msg, aux_message in self.messages_to_send['flow_mod']:
                             if(of_msg.match_equals(aux_of_msg)):
                                 add_message = False
-                        if(add_message):
-                            self.messages_to_send['flow_mod'].append((of_msg, message))
+                        if add_message:
+                            print(self.modules_priority_dict[module])
+                            if not self.modules_priority_dict[module] == "notInstallFlow":
+                                print("added %s", module)
+                                self.messages_to_send['flow_mod'].append((of_msg, message))
                 self.resolution_messages['flow_mod'] = {}
 
 
@@ -170,83 +178,3 @@ class Composition():
                         if(add_message):
                             self.messages_to_send['packet_out'].append((of_msg, message))
                 self.resolution_messages['packet_out'] = {}
-
-
-        
-'''
-
-    #compare two flowmods and if there are not equals, it sends the flowmod from the firewall module
-    def flow_mod_resolution(self):
-    #TODO choose the flowmod from the highest priority module
-        if len(self.resolution_messages_flowmod) == 1:
-
-            print("one message to send")
-            self._messages_to_send.append(self.resolution_messages_flowmod.values()[0][1])
-        elif len(self.resolution_messages_flowmod) == 2:
-            of_msg1 = self.resolution_messages_flowmod.values()[0][0]
-            of_msg2 = self.resolution_messages_flowmod.values()[1][0]
-
-            print("match resolution.......................................")
-            if((of_msg1.match['dl_dst'], of_msg1.match['dl_src'], of_msg1.match['in_port'], of_msg1.match['dl_type']) == 
-                (of_msg2.match['dl_dst'], of_msg2.match['dl_src'], of_msg2.match['in_port'], of_msg2.match['dl_type'])):
-                print("match equals")
-                print("actions resolution..................")
-
-
-                #TODO: add high priority directly if match are equals
-                try:
-                    if of_msg1.actions[0].port == of_msg2.actions[0].port:
-                        #flow are equals, return any msg
-                        print("actions equals, added message to send")
-                        self._messages_to_send.append(self.resolution_messages_flowmod.values()[0][1])
-                    else : 
-                        #it sends the two flow-mods
-                        for (of_msg, message) in self.resolution_messages_flowmod.values():
-                            self._messages_to_send.append(message)
-                except:
-                    #actions empty
-                    #return the message with flowmod no actions
-                    for (of_msg, message) in self.resolution_messages_flowmod.values():
-                        if not of_msg.actions:
-                            print("not actions (drop message)")
-                            self._messages_to_send.append(message)
-            else:
-                #match not equals, send all flowmods
-                for (of_msg, message) in self.resolution_messages_flowmod.values():
-                    self._messages_to_send.append(message)
-
-        self.resolution_messages_flowmod = {}
-
-
-    def packet_out_resolution(self):
-    #TODO choose the packet_out from the highest priority module
-        if len(self.resolution_messages_packetout) == 1:
-            #send message
-            print("added of_msg packet_out to msgs_to_send")
-            self._messages_to_send.append(self.resolution_messages_packetout.values()[0][1])
-        elif len(self.resolution_messages_packetout) == 2:
-            of_msg1 = self.resolution_messages_packetout.values()[0][0]
-            of_msg2 = self.resolution_messages_packetout.values()[1][0]
-
-            #TODO: if are the same msg, send the high priority msg
-
-            try:
-                if of_msg1.actions[0].port == of_msg2.actions[0].port:
-                    #packet_out are equals, return any msg
-                    print("packet_out actions equals")
-                    self._messages_to_send.append(self.resolution_messages_packetout.values()[0][1])
-                else:
-                    for (of_msg, message) in self.resolution_messages_packetout.values():
-                        self._messages_to_send.append(message)
-
-            except: 
-            #actions empty
-                #return the message with packet_out no actions
-                for (of_msg, message) in self.resolution_messages_packetout.values():
-                    if not of_msg.actions:
-                        print("packet_out not actions (drop message)")
-                        self._messages_to_send.append(message)
-
-        self.resolution_messages_packetout = {}
-
-'''

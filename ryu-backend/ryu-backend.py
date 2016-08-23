@@ -48,7 +48,7 @@ NETIDE_CORE_PORT = 5555
 HEARTBEAT_TIMEOUT = 5 #5 seconds
 
 logger = logging.getLogger('ryu-backend')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class BackendDatapath(controller.Datapath):

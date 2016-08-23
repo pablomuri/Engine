@@ -21,6 +21,9 @@ When the two fence messages arrive, the resolution method is called and then, th
 If we wouldn't use OpenFlow, we would have to modify the CompositionManager.py file that contains the resolution methods and fence message handler. Also we would have to modify the OFMsg.py file that is used by the CompositionManager.
 
 
-
+- Dependencies:
+	Ryu for Python
+	Python
+	NetIp Libraries
 
 

@@ -6,15 +6,15 @@
 			<CallCondition events="packetIn"/>
     </Module>
 
-    <Module id="Firewall" loaderIdentification="firewall.py">
+    <Module id="Firewall_1" loaderIdentification="firewall.py">
       <CallCondition events="packetIn"/>
 	  </Module>
 
   </Modules>
   <Composition>
-    <ModuleCall module="Firewall" allowVetoResult="true"/>
+    <ModuleCall module="Firewall_1" notInstallFlow="true"/>
     <ParallelCall resolutionPolicy="priority">
-      <ModuleCall module="Firewall" priority="1"/>
+      <ModuleCall module="Firewall_1" priority="1"/>
       <ModuleCall module="SimpleSwitch" priority="2"/>
     </ParallelCall>
   </Composition>

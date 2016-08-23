@@ -25,7 +25,7 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_0
 from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
-from ryu.lib.packet import ethernet
+from ryu.lib.packet import ethernet, ipv4
 from ryu.lib.packet import ether_types
 
 
@@ -36,18 +36,14 @@ class SimpleSwitch(app_manager.RyuApp):
         super(SimpleSwitch, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
 
-    def add_flow(self, datapath, in_port, src, dst, actions, ethertype):
+    def add_flow(self, datapath, match, actions, idle_to, hard_to):
         ofproto = datapath.ofproto
-
-        match = datapath.ofproto_parser.OFPMatch(
-            in_port=in_port, dl_dst=haddr_to_bin(dst), dl_src=haddr_to_bin(src), dl_type=ethertype)
-
         mod = datapath.ofproto_parser.OFPFlowMod(
             datapath=datapath, match=match, cookie=0,
-            command=ofproto.OFPFC_ADD, idle_timeout=5, hard_timeout=0,
+            command=ofproto.OFPFC_ADD, idle_timeout=idle_to, hard_timeout=hard_to,
             priority=ofproto.OFP_DEFAULT_PRIORITY,
             flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
-        
+
         datapath.send_msg(mod)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -77,10 +73,20 @@ class SimpleSwitch(app_manager.RyuApp):
             out_port = ofproto.OFPP_FLOOD
 
         actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+        
+
 
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
-            self.add_flow(datapath, msg.in_port, src, dst, actions, eth.ethertype)
+            if eth.ethertype == ether_types.ETH_TYPE_IP:
+                ip4 = pkt.get_protocol(ipv4.ipv4)
+                # The firewall module use ip address to save states, then when a flow removed message arrives, the state is removed also.
+                # Then I have to create matchs using ip address
+                match = datapath.ofproto_parser.OFPMatch(in_port=msg.in_port, dl_type = eth.ethertype, dl_src=haddr_to_bin(src), dl_dst=haddr_to_bin(dst), nw_src=ip4.src, nw_dst=ip4.dst)
+            else:
+                match = datapath.ofproto_parser.OFPMatch(in_port=msg.in_port, dl_type = eth.ethertype, dl_src=haddr_to_bin(src), dl_dst=haddr_to_bin(dst))
+
+            self.add_flow(datapath, match, actions, 2, 0)
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:

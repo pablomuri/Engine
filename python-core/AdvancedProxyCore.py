@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ################################################################################
 # NetIDE Core - Python implementation										  #
 # NetIDE FP7 Project: www.netide.eu, github.com/fp7-netide					 #

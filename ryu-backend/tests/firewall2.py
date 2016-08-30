@@ -11,7 +11,7 @@ from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet, ipv4
 from ryu.lib.packet import ether_types
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPNetwork
 
 
 PROTO_TCP = 6
@@ -25,15 +25,21 @@ DMZ = IPNetwork('10.0.3.0/24')
 INET = IPNetwork('10.0.1.0/24')
 INTERNET = IPNetwork('10.0.2.0/24')
 
-ALLOW_RULES = { INET : [INTERNET, DMZ, INET]}
+BLOCKED_RULES = { IPNetwork('0.0.0.0/0') : [INET, DMZ]}
 
-ALL_ALLOWED = True
+ALLOWED_RULES = { 
+                    INTERNET : [DMZ, INTERNET, INET], 
+                    DMZ : [DMZ, INTERNET, INET],
+                    INET : [DMZ, INTERNET, INET]  
+                }
 
-class Firewall_1(app_manager.RyuApp):
+ALL_ALLOWED = False
+
+class Firewall_2(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
 
     def __init__(self, *args, **kwargs):
-        super(Firewall_1, self).__init__(*args, **kwargs)
+        super(Firewall_2, self).__init__(*args, **kwargs)
         self.states = set()
 
 
@@ -44,7 +50,6 @@ class Firewall_1(app_manager.RyuApp):
             command=ofproto.OFPFC_ADD, idle_timeout=1, hard_timeout=0,
             priority=ofproto.OFP_DEFAULT_PRIORITY,
             flags=ofproto.OFPFF_SEND_FLOW_REM, actions=[])
-
         datapath.send_msg(mod)
 
 
@@ -53,13 +58,21 @@ class Firewall_1(app_manager.RyuApp):
         if ALL_ALLOWED:
             return True
 
-        for range1, allowed_dst in ALLOW_RULES.items():
-            if IPAddress(ip_src) in range1:
+        for allowed_src, allowed_dst in ALLOWED_RULES.items():
+            if ip_src in allowed_src:
                 for range2 in allowed_dst:
-                    if IPAddress(ip_dst) in range2:
-                        return True 
+                    if ip_dst in range2:
+                        return True
 
-        return False
+        for blocked_src, blocked_dst in BLOCKED_RULES.items():
+            if ip_src in blocked_src:
+                for range2 in blocked_dst:
+                    if ip_dst in range2:
+                        return False
+
+        return True         
+        
+
 
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -81,7 +94,7 @@ class Firewall_1(app_manager.RyuApp):
             
         # IP Packets.......................................................................
         if ip4:
-            self.logger.info("IP PACKET FIREWALL_1, ip_src=%s ip_dst=%s", ip4.src, ip4.dst)
+            self.logger.info("IP PACKET FIREWALL_2, ip_src=%s ip_dst=%s", ip4.src, ip4.dst)
             if self.is_allowed(ip4.src, ip4.dst):
                 self.logger.info("PACKET ALLOWED")
                 self.states.add((ip4.src, ip4.dst))
@@ -141,7 +154,7 @@ class Firewall_1(app_manager.RyuApp):
     def flow_removed_handler(self, ev):
         match = ev.msg.match
         try:
-            self.logger.info("match removed %s", match)
+            #self.logger.info("match removed %s", match)
             self.states.remove((match['nw_src'], match['nw_dst']))
         except:
             pass

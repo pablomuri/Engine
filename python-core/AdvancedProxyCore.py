@@ -136,7 +136,7 @@ class MessageDispatcher(threading.Thread):
 						if self.composition.fence_msg_handler(module_id, x_id):
 							self.composition.resolution(self.running_modules)
 															
-							for d in self.composition.messages_to_send.values():
+							for type_, d in self.composition.messages_to_send.items():
 								print("sending messages")
 								for of_msg, message in d:
 									socket.send_multipart([shimname,message])

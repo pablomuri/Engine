@@ -42,9 +42,9 @@ class Composition():
         self.modules_priority_dict = OrderedDict(sorted(self.modules_priority_dict.iteritems(), key=lambda x: x[1]))
 
         for df in doc.xpath('//ModuleCall'):
-            if "notInstallFlow" in df.attrib.keys():
-                if df.attrib['notInstallFlow'] == "true":
-                    self.modules_priority_dict[df.attrib["module"]] = "notInstallFlow"
+            if "notSendMessage" in df.attrib.keys():
+                if df.attrib['notSendMessage'] == "true":
+                    self.modules_priority_dict[df.attrib["module"]] = "notSendMessage"
                     
     
     # this method returns the modules that are entitled to receive the event message
@@ -58,6 +58,7 @@ class Composition():
                     # print("not conditions ")
                     add_module = False
                     break
+            add_module=True
             if add_module:
                 modules.append(module)
         #print(modules)
@@ -82,15 +83,13 @@ class Composition():
         elif condition == 'inPort':
             of_msg = OFMsg(datapath_id, message)
             if(of_msg.msg_type == 10):
-                print("packet in")
                 in_port = of_msg.packetIn.in_port
-                print(in_port)
+                print("in_port %s" % in_port)
                 if str(in_port) in value:
                     return True
             else : 
-                return True
+                return False
         
-
         elif condition == 'events': 
             return True
         
@@ -103,7 +102,7 @@ class Composition():
                 pass
         
         #print('Condition %s value %s is False' % (condition, value))
-        return True #should be False!!!
+        return False #should be False!!!
 
     #save the packet for a final resolution
     # if the packet is not packet_out or flowmod, or if is packet_out but the action is flood, it return false
@@ -146,35 +145,38 @@ class Composition():
     def _flow_mod_resolution(self):
         if 'flow_mod' in self.resolution_messages:
             if self.resolution_messages['flow_mod']: #key 'flow_mod' exists
-                self.messages_to_send['flow_mod'] = [] 
+                messages_to_send = []
+                messages_to_send_aux = []
                 for module in self.modules_priority_dict.keys():
                     module_id = self.running_modules[module].get('module_id')
                     if module_id in self.resolution_messages['flow_mod']:
                         of_msg, message = self.resolution_messages['flow_mod'][module_id]
                         add_message = True
-                        for aux_of_msg, aux_message in self.messages_to_send['flow_mod']:
+                        for aux_of_msg, aux_message in messages_to_send:
                             if(of_msg.match_equals(aux_of_msg)):
                                 add_message = False
                         if add_message:
-                            print(self.modules_priority_dict[module])
-                            if not self.modules_priority_dict[module] == "notInstallFlow":
-                                print("added %s", module)
-                                self.messages_to_send['flow_mod'].append((of_msg, message))
+                            messages_to_send.append((of_msg, message))
+                            if not self.modules_priority_dict[module] == "notSendMessage":
+                                messages_to_send_aux.append((of_msg, message))
+
+                self.messages_to_send['flow_mod'] = messages_to_send_aux
                 self.resolution_messages['flow_mod'] = {}
 
 
     def _packet_out_resolution(self):
         if 'packet_out' in self.resolution_messages:
             if self.resolution_messages['packet_out']:
-                self.messages_to_send['packet_out'] = []
+                messages_to_send = []
+                messages_to_send_aux = []
                 for module in self.modules_priority_dict.keys():
                     module_id = self.running_modules[module].get('module_id')
                     if module_id in self.resolution_messages['packet_out']:
                         of_msg, message = self.resolution_messages['packet_out'].get(module_id)
-                        add_message = True
-                        for aux_of_msg, aux_message in self.messages_to_send['packet_out']:
-                            if(of_msg.packet_out_equals(aux_of_msg)):
-                                add_message = False
-                        if(add_message):
-                            self.messages_to_send['packet_out'].append((of_msg, message))
+                        messages_to_send.append((of_msg, message))
+                        if not self.modules_priority_dict[module] == "notSendMessage":
+                            messages_to_send_aux.append((of_msg, message))
+                        break
+
+                self.messages_to_send['packet_out'] = messages_to_send_aux
                 self.resolution_messages['packet_out'] = {}

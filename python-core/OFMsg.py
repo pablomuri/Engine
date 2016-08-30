@@ -14,7 +14,6 @@ class OFMsg(object):
 	
 		if self.msg_type == 10: #packet in
 			self.packet_in_handler()
-			print(self.packetIn)
 		elif self.msg_type == 13: #packet out
 			self.packet_out_handler()
 		elif self.msg_type == 14: #flow_mod

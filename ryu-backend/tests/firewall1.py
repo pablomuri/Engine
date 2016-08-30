@@ -11,7 +11,7 @@ from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet, ipv4
 from ryu.lib.packet import ether_types
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPNetwork
 
 
 PROTO_TCP = 6
@@ -25,7 +25,8 @@ DMZ = IPNetwork('10.0.3.0/24')
 INET = IPNetwork('10.0.1.0/24')
 INTERNET = IPNetwork('10.0.2.0/24')
 
-ALLOW_RULES = { INET : [INTERNET, DMZ, INET]}
+BLOCKED_RULES = { IPNetwork('0.0.0.0/0') : [INET]}
+ALLOWED_RULES = { INET : [INET] }
 
 ALL_ALLOWED = False
 
@@ -44,7 +45,6 @@ class Firewall_1(app_manager.RyuApp):
             command=ofproto.OFPFC_ADD, idle_timeout=1, hard_timeout=0,
             priority=ofproto.OFP_DEFAULT_PRIORITY,
             flags=ofproto.OFPFF_SEND_FLOW_REM, actions=[])
-
         datapath.send_msg(mod)
 
 
@@ -53,13 +53,21 @@ class Firewall_1(app_manager.RyuApp):
         if ALL_ALLOWED:
             return True
 
-        for range1, allowed_dst in ALLOW_RULES.items():
-            if IPAddress(ip_src) in range1:
+        for allowed_src, allowed_dst in ALLOWED_RULES.items():
+            if ip_src in allowed_src:
                 for range2 in allowed_dst:
-                    if IPAddress(ip_dst) in range2:
-                        return True 
+                    if ip_dst in range2:
+                        return True
 
-        return False
+        for blocked_src, blocked_dst in BLOCKED_RULES.items():
+            if ip_src in blocked_src:
+                for range2 in blocked_dst:
+                    if ip_dst in range2:
+                        return False
+
+        return True         
+        
+
 
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -141,7 +149,7 @@ class Firewall_1(app_manager.RyuApp):
     def flow_removed_handler(self, ev):
         match = ev.msg.match
         try:
-            self.logger.info("match removed %s", match)
+            #self.logger.info("match removed %s", match)
             self.states.remove((match['nw_src'], match['nw_dst']))
         except:
             pass

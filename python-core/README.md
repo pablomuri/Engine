@@ -1,4 +1,23 @@
-How it works.
+#Installation
+
+The Ryu backend is provided as an additional module for the Ryu controller. In order to use it, first clone the Ryu code (from here) on a local machine. Copy the python folder from ../Libraries/netip into the ryu/ryu folder and rename it as netide. After that, install Ryu by running the command python ./setup.py install from the ryu folder. Then, add the Ryu's installation path to the PYTHONPATH variable in your ~/.profile or ~/.bashrc (e.g. in a Ubuntu 14.04 Linux OS: export PYTHONPATH=/usr/local/lib/python2.7/dist-packages/ryu).
+
+Finally, install the Ryu controller by entering the ryu folder and by running the command:
+
+python ./setup.py install
+
+Additional python packages may be required in order to succefully complete the installation procedure. On a Ubuntu 14.04 Linux OS the following must be installed:
+
+sudo apt-get install python-pip python-dev python-repoze.lru libxml2-dev libxslt1-dev zlib1g-dev python-zmq
+sudo pip install ecdsa stevedore greenlet oslo.config eventlet WebOb Routes lxml
+
+#Use
+Use the demo_launcher.sh script in this folder
+
+./demo_launcher.sh
+
+
+#How it works.
 
 To do the resolution, the core is storing flow-mods and packets-out recived from the backend. When the backend sends a fence message for each module, the resolution method is called.
 

@@ -21,12 +21,12 @@ def myNetwork():
 	info( '*** Add hosts\n')
 	dmz = net.addHost('dns', cls=Host, ip='10.0.3.1/16')
 	#www = net.addHost('www', cls=Host, ip='10.0.3.2/16')
-	inter = net.addHost('inter', cls=Host, ip='10.0.2.1/16')
-	inet = net.addHost('inet', cls=Host, ip='10.0.1.1/16')
+	internet = net.addHost('internet', cls=Host, ip='10.0.2.1/16')
+	interior = net.addHost('interior', cls=Host, ip='10.0.1.1/16')
 	
 	info( '*** Add links\n')
-	net.addLink(s1, inet, port1=1)
-	net.addLink(s1, inter, port1=2)
+	net.addLink(s1, iterior, port1=1)
+	net.addLink(s1, internet, port1=2)
 	#net.addLink(s1, www, port1=3)
 	net.addLink(s1, dmz, port1=3)
 

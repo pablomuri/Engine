@@ -25,7 +25,7 @@ def myNetwork():
 	interior = net.addHost('interior', cls=Host, ip='10.0.1.1/16')
 	
 	info( '*** Add links\n')
-	net.addLink(s1, iterior, port1=1)
+	net.addLink(s1, interior, port1=1)
 	net.addLink(s1, internet, port1=2)
 	#net.addLink(s1, www, port1=3)
 	net.addLink(s1, dmz, port1=3)

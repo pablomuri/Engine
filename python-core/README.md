@@ -10,6 +10,8 @@ Additional python packages may be required in order to succefully complete the i
 
 sudo apt-get install python-pip python-dev python-repoze.lru libxml2-dev libxslt1-dev zlib1g-dev python-zmq
 
+sudo apt-get install --upgrade msgpack-python
+
 sudo pip install ecdsa stevedore greenlet oslo.config eventlet WebOb Routes lxml
 
 #Use

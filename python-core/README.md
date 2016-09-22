@@ -9,6 +9,7 @@ python ./setup.py install
 Additional python packages may be required in order to succefully complete the installation procedure. On a Ubuntu 14.04 Linux OS the following must be installed:
 
 sudo apt-get install python-pip python-dev python-repoze.lru libxml2-dev libxslt1-dev zlib1g-dev python-zmq
+
 sudo pip install ecdsa stevedore greenlet oslo.config eventlet WebOb Routes lxml
 
 #Use
